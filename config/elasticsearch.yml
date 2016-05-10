@@ -1,21 +1,26 @@
-############################## Network And HTTP ###############################
+cluster:
+  name: ${CLUSTER_NAME}
 
-network.bind_host: 0.0.0.0
-network.publish_host: _non_loopback:ipv4_
+node:
+  master: ${NODE_MASTER}
+  data: ${NODE_DATA}
 
-################################## Discovery ##################################
+path:
+  data: /data/data
+  logs: /data/log
+  plugins: ${PLUGINS_DIR}
+  scripts: ${CONFIG_DIR}/scripts
+  work: /data/work
 
-discovery.zen.minimum_master_nodes: 1
-discovery.zen.ping.multicast.address: _lo:ipv4_
-discovery.zen.fd.ping_interval: 10s
-discovery.zen.fd.ping_timeout: 15s
-discovery.zen.fd.ping_retries: 1
-discovery.type: zen
-gateway.local.initial_shards: 1
-index.number_of_replicas: 0
-index.number_of_shards: 1
+bootstrap.mlockall: ${MLOCKALL}
 
-# bootstrap.mlockall: true
-script.groovy.sandbox.enabled : true
-script.inline: true
-action.auto_create_index: false
+network.host: 0.0.0.0
+http.enabled: ${HTTP_ENABLE}
+
+discovery.zen.ping.multicast.enabled: ${MULTICAST}
+
+index.number_of_replicas: ${INITIAL_REPLICAS}
+index.number_of_shards: ${INITIAL_SHARDS}
+
+script.groovy.sandbox.enabled : ${SCRIPT_ENABLE}
+script.inline: ${SCRIPT_ENABLE}

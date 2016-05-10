@@ -1,53 +1,27 @@
-FROM java:8-jre
+FROM delitescere/java
 
-# grab gosu for easy step-down from root
-ENV GOSU_VERSION 1.7
-RUN set -x \
-	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
-	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
-	&& export GNUPGHOME="$(mktemp -d)" \
-	&& gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
-	&& gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
-	&& rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
-	&& chmod +x /usr/local/bin/gosu \
-	&& gosu nobody true
-
-# https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-repositories.html
-# https://packages.elasticsearch.org/GPG-KEY-elasticsearch
-RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 46095ACC8548582C1A2699A9D27D666CD88E42B4
-
-ENV ELASTICSEARCH_MAJOR 2.3
-ENV ELASTICSEARCH_VERSION 2.3.2
-ENV ELASTICSEARCH_REPO_BASE http://packages.elasticsearch.org/elasticsearch/2.x/debian
-
-RUN echo "deb $ELASTICSEARCH_REPO_BASE stable main" > /etc/apt/sources.list.d/elasticsearch.list
-
-RUN set -x \
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends elasticsearch=$ELASTICSEARCH_VERSION \
-	&& rm -rf /var/lib/apt/lists/*
-
-ENV PATH /usr/share/elasticsearch/bin:$PATH
-
-WORKDIR /usr/share/elasticsearch
-
-RUN set -ex \
-	&& for path in \
-		./data \
-		./logs \
-		./config \
-		./config/scripts \
-	; do \
-		mkdir -p "$path"; \
-		chown -R elasticsearch:elasticsearch "$path"; \
-	done
-
-COPY config ./config
-
-VOLUME /usr/share/elasticsearch/data
-
-COPY docker-entrypoint.sh /
-
+# Export HTTP & Transport
 EXPOSE 9200 9300
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["elasticsearch"]
+
+ENV VERSION 2.3.2
+
+
+# Install Elasticsearch.
+RUN apk add --update tar curl ca-certificates sudo && \
+  mkdir /elasticsearch && cd /elasticsearch && \
+  ( curl -Lskj https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/$VERSION/elasticsearch-$VERSION.tar.gz | \
+  gunzip -c - | tar xf - --strip 1 ) && \
+  rm -rf $(find /elasticsearch | egrep "(\.(exe|bat)$|sigar/.*(dll|winnt|x86-linux|solaris|ia64|freebsd|macosx))") && \
+  apk del curl wget ca-certificates && \
+  mkdir -p /elasticsearch/plugins && mkdir -p /data && chown -R nobody:nobody /data && \
+  /elasticsearch/bin/elasticsearch --version && \
+  rm -rf /tmp/* /var/cache/apk/*
+
+# Copy configuration
+COPY config /elasticsearch/config
+COPY docker-entrypoint.sh /elasticsearch/bin/start.sh
+
+# Volume for Elasticsearch data
+VOLUME ["/data"]
+
+ENTRYPOINT [ "/elasticsearch/bin/start.sh" ]
