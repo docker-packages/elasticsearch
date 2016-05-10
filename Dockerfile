@@ -1,4 +1,4 @@
-FROM delitescere/java
+FROM iron/java:1.8
 
 # Export HTTP & Transport
 EXPOSE 9200 9300
